@@ -1,3 +1,4 @@
 # Ignore the cloned repos for the app
 /vermundo-backend
 /vermundo
+.env
