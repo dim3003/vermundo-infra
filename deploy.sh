@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# --- config ---
+# --- CONFIG ---
 BACKEND_REPO="${BACKEND_REPO:-https://github.com/dim3003/vermundo-backend}"
 FRONTEND_REPO="${FRONTEND_REPO:-https://github.com/dim3003/vermundo}"
 BACKEND_REF="${BACKEND_REF:-}"   # optional: branch/tag/commit
@@ -12,11 +12,8 @@ API_WORKDIR="/src/src/Vermundo.Api"
 SDK_IMAGE="mcr.microsoft.com/dotnet/sdk:9.0"
 DB_CONTAINER="db"
 
-# --- UID/GID for ubuntu ---
-USER_ID=$(id -u)
-GROUP_ID=$(id -g)
-
 die(){ echo "ERROR: $*" >&2; exit 1; }
+
 get_env(){ 
     local k="$1"
     [[ -f .env ]] || die ".env missing"
@@ -31,11 +28,14 @@ POSTGRES_PASSWORD="$(get_env POSTGRES_PASSWORD)"
 POSTGRES_DB="$(get_env POSTGRES_DB)"
 [[ -n "$POSTGRES_USER" && -n "$POSTGRES_PASSWORD" && -n "$POSTGRES_DB" ]] || die "POSTGRES_* not complete"
 
+# Récupère l’UID/GID du user ubuntu pour Docker
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+
 echo ">> Stopping any existing stack..."
 docker compose down || true
 
 echo ">> Cleaning source folders..."
-sudo chown -R $USER_ID:$GROUP_ID "./${BACKEND_DIR}" "./${FRONTEND_DIR}" || true
 rm -rf "./${BACKEND_DIR}" "./${FRONTEND_DIR}"
 
 echo ">> Cloning backend..."
@@ -47,7 +47,7 @@ echo ">> Cloning frontend..."
 git clone --depth 1 "$FRONTEND_REPO" "$FRONTEND_DIR"
 [[ -n "$FRONTEND_REF" ]] && (cd "$FRONTEND_DIR" && git fetch --depth 1 origin "$FRONTEND_REF" && git checkout "$FRONTEND_REF")
 
-# --- start only DB ---
+# --- START DB ONLY ---
 echo ">> Starting database only..."
 docker compose up -d --build db
 
@@ -64,29 +64,31 @@ done
 COMPOSE_NET="$(docker inspect "$DB_CONTAINER" --format '{{range $k,$v := .NetworkSettings.Networks}}{{printf "%s" $k}}{{end}}')"
 [[ -n "$COMPOSE_NET" ]] || die "Could not detect compose network"
 
-# --- run migrations from disposable SDK container ---
+# --- RUN MIGRATIONS FROM DISPOSABLE SDK CONTAINER ---
 BACKEND_SRC="$(pwd)/${BACKEND_DIR}"
 echo ">> Applying EF Core migrations..."
+
 docker run --rm -i \
   --network "$COMPOSE_NET" \
   -v "$BACKEND_SRC:/src" \
   -w "$API_WORKDIR" \
+  -e "DOTNET_ROOT=/src/.dotnet" \
+  -e "PATH=/src/.dotnet/tools:$PATH" \
   -e "ConnectionStrings__Database=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
   -u $USER_ID:$GROUP_ID \
   "$SDK_IMAGE" \
   bash -lc '
     set -e
-    dotnet tool install --global dotnet-ef >/dev/null 2>&1 || true
-    export PATH="$PATH:/home/ubuntu/.dotnet/tools"
+    mkdir -p /src/.dotnet
+    dotnet tool install --tool-path /src/.dotnet dotnet-ef >/dev/null 2>&1 || true
     dotnet restore
     dotnet ef database update
   '
+
 echo ">> Migrations applied."
 
-# --- NOW start backend + frontend (with user) ---
+# --- START BACKEND + FRONTEND ---
 echo ">> Starting backend and frontend..."
-export UID=$USER_ID
-export GID=$GROUP_ID
 docker compose up -d --build backend frontend
 
 echo ">> Current status:"
