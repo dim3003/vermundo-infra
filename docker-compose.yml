@@ -30,17 +30,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
+      
   frontend:
     build:
       context: ./vermundo
     container_name: frontend
     ports:
-      - "80:80"  # expose to outside world 
+      - "80:80"
+      - "443:443"
     depends_on:
       - backend
     environment:
       VITE_API_URL: http://backend:8080
+    volumes:
+      - /etc/letsencrypt/live/vermundo.ch:/etc/letsencrypt/live/vermundo.ch:ro
+      - /etc/letsencrypt/archive/vermundo.ch:/etc/letsencrypt/archive/vermundo.ch:ro
+      - /etc/letsencrypt/renewal:/etc/letsencrypt/renewal:ro
 
 volumes:
   pgdata:
