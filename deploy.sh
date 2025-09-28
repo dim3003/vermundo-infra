@@ -77,6 +77,7 @@ docker run --rm -i \
   -w "$API_WORKDIR" \
   -e "DOTNET_ROOT=/src/.dotnet" \
   -e "PATH=/src/.dotnet/tools:$PATH" \
+  -e "HOME=/src" \
   -e "ConnectionStrings__Database=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
   -u $USER_ID:$GROUP_ID \
   "$SDK_IMAGE" \
