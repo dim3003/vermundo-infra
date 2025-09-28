@@ -56,7 +56,7 @@ docker compose up -d --build db
 
 echo ">> Waiting for Postgres..."
 for i in {1..30}; do
-  if docker exec "$DB_CONTAINER" pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432 >/dev/null 2>&1; then
+  if docker exec "$DB_CONTAINER" pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1; then
     echo "   Postgres is ready."
     break
   fi
@@ -76,15 +76,19 @@ docker run --rm -i \
   -v "$BACKEND_SRC:/src" \
   -w "$API_WORKDIR" \
   -e "DOTNET_ROOT=/src/.dotnet" \
-  -e "PATH=/src/.dotnet/tools:$PATH" \
+  -e "PATH=/src/.dotnet:$PATH:/root/.dotnet/tools" \
   -e "HOME=/src" \
   -e "ConnectionStrings__Database=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
   -u $USER_ID:$GROUP_ID \
   "$SDK_IMAGE" \
   bash -lc '
     set -e
-    mkdir -p /src/.dotnet
-    dotnet tool install --tool-path /src/.dotnet dotnet-ef >/dev/null 2>&1 || true
+    mkdir -p /src/.dotnet /root/.dotnet/tools
+    # Install dotnet-ef locally if not present
+    if ! [ -x /src/.dotnet/dotnet-ef ]; then
+      dotnet tool install --tool-path /src/.dotnet dotnet-ef
+    fi
+    export PATH="/src/.dotnet:/root/.dotnet/tools:$PATH"
     dotnet restore
     dotnet ef database update
   '
