@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Fix for EF migrations failing with /.dotnet permission denied
+export DOTNET_CLI_HOME=/home/ubuntu
+
 # --- CONFIG ---
 BACKEND_REPO="${BACKEND_REPO:-https://github.com/dim3003/vermundo-backend}"
 FRONTEND_REPO="${FRONTEND_REPO:-https://github.com/dim3003/vermundo}"
