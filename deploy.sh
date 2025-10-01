@@ -26,7 +26,7 @@ echo ">> Stopping any existing stack..."
 docker compose down || true
 
 echo ">> Removing existing source folders..."
-rm -rf "./${BACKEND_DIR}" "./${FRONTEND_DIR}"
+sudo rm -rf "./${BACKEND_DIR}" "./${FRONTEND_DIR}"
 
 echo ">> Cloning backend..."
 git clone --depth 1 "$BACKEND_REPO" "$BACKEND_DIR"
