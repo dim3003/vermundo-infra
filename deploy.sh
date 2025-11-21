@@ -65,9 +65,14 @@ docker run --rm -i \
   "$SDK_IMAGE" \
   bash -lc '
     set -e
-    dotnet tool install --global dotnet-ef >/dev/null 2>&1 || true
+    echo "Installing dotnet-ef 9.0.10..."
+    dotnet tool install --global dotnet-ef --version 9.0.10
     export PATH="$PATH:/root/.dotnet/tools"
+
+    echo "Restoring..."
     dotnet restore
+
+    echo "Running migrations..."
     dotnet ef database update
   '
 echo ">> Migrations applied."
