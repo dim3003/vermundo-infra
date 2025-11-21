@@ -63,18 +63,20 @@ docker run --rm -i \
   -w "$API_WORKDIR" \
   -e "ConnectionStrings__Database=Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
   "$SDK_IMAGE" \
-  bash -lc '
-    set -e
-    echo "Installing dotnet-ef 9.0.10..."
-    dotnet tool install --global dotnet-ef --version 9.0.10
-    export PATH="$PATH:/root/.dotnet/tools"
+    bash -lc '
+  set -e
+  echo "Installing dotnet-ef 9.0.10..."
+  dotnet tool install --global dotnet-ef --version 9.0.10
+  export PATH="$PATH:/root/.dotnet/tools"
 
-    echo "Restoring..."
-    dotnet restore
+  echo "Restoring..."
+  dotnet restore
 
-    echo "Running migrations..."
-    dotnet ef database update
-  '
+  echo "Running migrations..."
+  dotnet ef database update \
+    --project ../Vermundo.Infrastructure/Vermundo.Infrastructure.csproj \
+    --startup-project .
+'
 echo ">> Migrations applied."
 
 # --- NOW start backend + frontend (and rebuild) ---
